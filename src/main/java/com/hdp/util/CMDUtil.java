@@ -6,6 +6,7 @@ import java.util.concurrent.Executors;
 
 public class CMDUtil {
     public static final String OS = System.getProperty("os.name");
+    static boolean isLinux = true;
     public static Logger log = Logger.getLogger(CMDUtil.class);
 
     static ExecutorService es1 = Executors.newFixedThreadPool(2);
@@ -35,16 +36,14 @@ public class CMDUtil {
     public static void runOSCommand(String cmd) throws Exception{
         System.out.println("os="+OS);
         if(OS.toLowerCase().contains("windows")){
-            runCMD("cmd",cmd);
-        } else if(OS.toLowerCase().contains("linux")){
-            runCMD("sh",cmd);
-        } else {
-            runCMD("sh",cmd);
+            isLinux = false;
         }
+
+        runCMD(cmd);
     }
 
-    protected static void runCMD(String type,String cmd)  throws IOException,InterruptedException {
-        Process p = buildProcess(type, cmd);
+    protected static void runCMD(String cmd)  throws IOException,InterruptedException {
+        Process p = buildProcess(cmd);
         InputStream in = p.getInputStream();
         InputStream err = p.getErrorStream();
         es1.submit(()-> readInputStream(in));
@@ -53,24 +52,27 @@ public class CMDUtil {
         log.info("command exit code="+exitCode);
     }
 
-
     /**
      *
      * @param cmdType windows: cmd , linux: sh
      * @param cmd
      * @return
      */
-    private static Process buildProcess(String cmdType, String cmd) throws IOException {
+    private static Process buildProcess(String cmd) throws IOException {
         log.info("command = "+cmd);
-        ProcessBuilder pb = new ProcessBuilder(cmdType, "/c", cmd);
+        ProcessBuilder pb;
+        if(isLinux) {
+             pb = new ProcessBuilder(  "sh", "-c", cmd);
+        } else {
+             pb = new ProcessBuilder("cmd.exe", "/c", cmd);
+        }
         pb.redirectErrorStream();
         Process p = pb.start();
-        broadcastProcess = p;
         log.info("process="+p);
         return p;
 
     }
-
+    
     private static void readInputStream(InputStream in) {
         BufferedReader br = new BufferedReader(new InputStreamReader(in));
         try {
